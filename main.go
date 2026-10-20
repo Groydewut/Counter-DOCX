@@ -17,11 +17,9 @@ import (
 )
 
 const (
-	charsPerLine = 60
+	charsPerLine = 50
 	linesPerPage = 35
 )
-
-var nameFile = "1_3.docx"
 
 var (
 	ErrDocumentXmlNotFound = errors.New("компонент word/document.xml не найден внутри архива")
