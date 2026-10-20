@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <title>Подсчёт страниц</title>
+
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                padding: 24px 16px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: #f3f5f9;
+                color: #1f2937;
+                font-family: system-ui, sans-serif;
+            }
+
+            .card {
+                width: 100%;
+                max-width: 440px;
+                padding: 28px;
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 8px 30px #1f293710;
+            }
+
+            h1 {
+                margin: 0 0 10px;
+                font-size: 25px;
+            }
+
+            .description {
+                margin: 0 0 24px;
+                color: #64748b;
+                line-height: 1.5;
+            }
+
+            .file-label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+
+            input[type="file"] {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+                background: #fff;
+            }
+
+            button {
+                width: 100%;
+                margin-top: 16px;
+                padding: 14px;
+                border: 0;
+                border-radius: 10px;
+                background: #2563eb;
+                color: white;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            button:disabled {
+                opacity: 0.6;
+                cursor: wait;
+            }
+
+            #status {
+                margin-top: 20px;
+                line-height: 1.5;
+                overflow-wrap: anywhere;
+            }
+
+            .result {
+                padding: 16px;
+                border-radius: 12px;
+                background: #eff6ff;
+                color: #1d4ed8;
+            }
+
+            .result strong {
+                display: block;
+                margin-top: 4px;
+                font-size: 30px;
+            }
+
+            .error {
+                color: #b91c1c;
+            }
+
+            .hint {
+                margin-top: 18px;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main class="card">
+            <h1>Подсчёт страниц DOCX</h1>
+
+            <p class="description">Выберите документ Word, чтобы оценить количество страниц.</p>
+
+            <form id="uploadForm">
+                <label class="file-label" for="document"> Документ </label>
+
+                <input type="file" id="document" name="document" accept=".docx" required />
+
+                <button id="submitButton" type="submit">Рассчитать страницы</button>
+            </form>
+
+            <div id="status" aria-live="polite"></div>
+
+            <p class="hint">
+                Подсчёт приблизительный. Реальное количество страниц зависит от шрифта, полей и форматирования
+                документа.
+            </p>
+        </main>
+
+        <script>
+            const form = document.getElementById("uploadForm");
+            const fileInput = document.getElementById("document");
+            const submitButton = document.getElementById("submitButton");
+            const status = document.getElementById("status");
+
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    status.textContent = "Сначала выберите документ.";
+                    status.className = "error";
+                    return;
+                }
+
+                if (!file.name.toLowerCase().endsWith(".docx")) {
+                    status.textContent = "Выберите файл с расширением .docx.";
+                    status.className = "error";
+                    return;
+                }
+
+                const formData = new FormData(form);
+
+                submitButton.disabled = true;
+                submitButton.textContent = "Обрабатываем...";
+                status.className = "";
+                status.textContent = "Загружаем документ и считаем страницы...";
+
+                try {
+                    const response = await fetch("/upload", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    const resultText = await response.text();
+
+                    if (!response.ok) {
+                        throw new Error(resultText || "Не удалось обработать документ.");
+                    }
+
+                    const result = JSON.parse(resultText);
+
+                    status.className = "result";
+                    status.replaceChildren();
+
+                    const filename = document.createElement("div");
+                    filename.textContent = "Документ: " + result.filename;
+
+                    const label = document.createElement("div");
+                    label.textContent = "Примерное количество страниц:";
+
+                    const value = document.createElement("strong");
+                    value.textContent = result.pages;
+
+                    status.append(filename, label, value);
+                } catch (error) {
+                    status.className = "error";
+                    status.textContent = error.message || "Ошибка соединения с сервером.";
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = "Рассчитать страницы";
+                }
+            });
+        </script>
+    </body>
+</html>
